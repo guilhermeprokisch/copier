@@ -258,10 +258,10 @@ def load_and_flatten_yaml(file_path: str) -> dict:
                 items.append((new_key, v))
         return dict(items)
 
-    sep = "."
-    flattened_data = flatten_dict(data, sep)
+    SEPARATOR = "."
+    flattened_data = flatten_dict(data, SEPARATOR)
     flattened_data = {
-        key.split(sep)[-1]: value if key.startswith(sep) else value
+        key.split(SEPARATOR)[-1]: value if key.startswith(SEPARATOR) else value
         for key, value in flattened_data.items()
     }
     return flattened_data
