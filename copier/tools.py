@@ -16,6 +16,7 @@ from types import TracebackType
 from typing import Any, Callable, Literal, TextIO, cast
 
 import colorama
+import yaml
 from packaging.version import Version
 from pydantic import StrictBool
 
@@ -212,3 +213,55 @@ def normalize_git_path(path: str) -> str:
     path = path.replace('\\"', '"')
     # Convert octal to utf8
     return _re_octal.sub(_re_octal_replace, path)
+
+
+def load_and_flatten_yaml(file_path: str) -> dict:
+    """Load a YAML file and flatten nested keys into unnested ones.
+
+    Parameters:
+        file_path (str): The path to the YAML file.
+
+    Returns:
+        dict: A dictionary with unnested keys.
+
+    Example:
+        If the YAML file has the following structure:
+        ```
+        user:
+            details:
+            name: John Doe
+            age: 30
+        address:
+            city: New York
+            state: NY
+        ```
+        The output will be:
+        ```
+        {
+            'name': 'John Doe',
+            'age': 30,
+            'city': 'New York',
+            'state': 'NY'
+        }
+        ```
+    """
+    with open(file_path) as file:
+        data = yaml.safe_load(file)
+
+    def flatten_dict(d, parent_key="", sep="."):
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+
+    sep = "."
+    flattened_data = flatten_dict(data, sep)
+    flattened_data = {
+        key.split(sep)[-1]: value if key.startswith(sep) else value
+        for key, value in flattened_data.items()
+    }
+    return flattened_data

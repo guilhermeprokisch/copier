@@ -13,14 +13,7 @@ from itertools import chain
 from pathlib import Path
 from shutil import rmtree
 from tempfile import TemporaryDirectory
-from typing import (
-    Callable,
-    Iterable,
-    Literal,
-    Mapping,
-    Sequence,
-    get_args,
-)
+from typing import Callable, Iterable, Literal, Mapping, Sequence, get_args
 from unicodedata import normalize
 
 from jinja2.loaders import FileSystemLoader
@@ -255,6 +248,34 @@ class Worker:
         )
         return answers
 
+    def _copier_answers_format(self) -> Mapping:
+        # All internal values must appear first
+        answers: AnyByStrDict = {}
+        commit = self.template.commit
+        src = self.template.url
+        for key, value in (("_commit", commit), ("_src_path", src)):
+            if value is not None:
+                answers[key] = value
+
+        # Other data goes next
+        for k, v in self.answers.combined.items():
+            if (
+                not k.startswith("_")
+                and k not in self.answers.hidden
+                and k not in self.template.secret_questions
+                and k in self.template.questions_data
+                and isinstance(k, JSONSerializable)
+                and isinstance(v, JSONSerializable)
+            ):
+                answer_group = self.template.questions_data[k].get("group")
+                if answer_group:
+                    if answer_group not in answers:
+                        answers[answer_group] = {}
+                    answers[answer_group].update({str(k): v})
+                else:
+                    answers[k] = v
+        return answers
+
     def _execute_tasks(self, tasks: Sequence[Task]) -> None:
         """Run the given tasks.
 
@@ -299,7 +320,7 @@ class Worker:
         return dict(
             DEFAULT_DATA,
             **self.answers.combined,
-            _copier_answers=self._answers_to_remember(),
+            _copier_answers=self._copier_answers_format(),
             _copier_conf=conf,
             _folder_name=self.subproject.local_abspath.name,
             _copier_python=sys.executable,
