@@ -9,11 +9,11 @@ from functools import cached_property
 from pathlib import Path
 from typing import Callable
 
-import yaml
 from plumbum.machines import local
 from pydantic.dataclasses import dataclass
 
 from .template import Template
+from .tools import load_and_flatten_yaml
 from .types import AbsolutePath, AnyByStrDict, VCSTypes
 from .vcs import get_git, is_in_git_repo
 
@@ -54,9 +54,7 @@ class Subproject:
     def _raw_answers(self) -> AnyByStrDict:
         """Get last answers, loaded raw as yaml."""
         try:
-            return yaml.safe_load(
-                (self.local_abspath / self.answers_relpath).read_text()
-            )
+            return load_and_flatten_yaml(str(self.local_abspath / self.answers_relpath))
         except OSError:
             return {}
 
